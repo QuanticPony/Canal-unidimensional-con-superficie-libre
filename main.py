@@ -123,7 +123,7 @@ class River():
         return -self.bed_slope * (self.area(yc) / pow(np.sqrt(self.T(yc)), 3.0/2.0)) + \
             3.00/2.00 * np.sqrt(self.area(yc) * self.T(yc))
 
-    def _newtonrhapson(self, *, y_c_attempt=0.01, y_n_attempt=0.01):
+    def _newtonrhapson(self, *, y_c_attempt=1, y_n_attempt=1):
         """
         Calcula self.normal_depth y self.critical_depth mediante el método de Newton-Rhapson
         """
@@ -140,7 +140,7 @@ class River():
             d = diff(y)
             buffer = []
             while abs(d) > self.newton_rhapson_delta and i < 100000:
-                y = abs(y - 2*d/np.math.log(i+2))
+                y = abs(y - d/np.math.log(i+2))
                 i += 1
                 buffer.append(d)
                 d = diff(y)
@@ -162,15 +162,22 @@ class River():
             calculate=_debug_calculate
 
 
-        # Para obtener la pendiente crítica
-        #for i in range(1, 10000):
-        #    self.bed_slope += 1e-8
-        #    self.critical_depth = calculate(cdiff, y_c_attempt)
-        #    self.normal_depth = calculate(ndiff, y_n_attempt)
-        #    if abs(self.critical_depth - self.normal_depth) < 0.000001:
-        #        print(f"{self.bed_slope}, {self.critical_depth}, {self.normal_depth}")
-        #        exit()
-            
+        #delta = 0.01
+        #for j in range(1,10):
+        #    delta /= 10 
+        #    self.bed_slope -= 100 * delta
+        #    for i in range(-100, 100):
+        #        self.bed_slope += delta
+        #        self.critical_depth = calculate(cdiff, y_c_attempt)
+        #        self.normal_depth = calculate(ndiff, y_n_attempt)
+        #
+        #        if abs(self.critical_depth - self.normal_depth) < delta*100:
+        #            print(f"{self.bed_slope}, {self.critical_depth}, {self.normal_depth}")
+        #            break
+        #    else:
+        #        print("fail")
+        #
+        #exit()
 
         self.critical_depth = calculate(cdiff, y_c_attempt)
         if self.bed_slope != 0:
@@ -180,13 +187,15 @@ class River():
 
         if self._debug_mode:
             _fig, _ax = plt.subplots()
+            _ax.grid()
             _ax.plot(np.arange(len(self._debug_buffer[0])), self._debug_buffer[0], color="red", label="y_critica")
             if self.bed_slope != 0:
                 _ax.plot(np.arange(len(self._debug_buffer[1])), self._debug_buffer[1], color="green", label="y_normal")
             
-            _fig.legend()
+            _ax.legend()
+            _ax.set_title("Convergencia sin modificación")
             _ax.set_xlabel("#iteraciones")
-            _ax.set_ylabel("delta y (m)")
+            _ax.set_ylabel("f(y)/f'(y) (m)")
             plt.show()
 
         if self.critical_depth<0 or self.normal_depth<0:
@@ -200,8 +209,8 @@ class River():
         """
         if abs(self.critical_depth - self.normal_depth) < 0.01:
             if mode == 1:
-                self.runge_kutta_step = self.delta_x 
-                self.depth[0] = 1.01 * self.normal_depth
+                self.runge_kutta_step = -self.delta_x 
+                self.depth[0] = 1.1 * self.normal_depth
                 self.profile_channel_type = "C1"
             
             if mode == 2:
@@ -251,8 +260,8 @@ class River():
             if mode==1: 
                 #S1
                 #Condiciones río arriba:
-                self.runge_kutta_step = self.delta_x 
-                self.depth[0] = 1.01 * self.critical_depth
+                self.runge_kutta_step = -self.delta_x 
+                self.depth[0] = 1.5 * self.critical_depth
                 self.profile_channel_type = "S1"
             elif mode==2: 
                 #S2
@@ -304,7 +313,7 @@ class River():
 
 
 if __name__ == '__main__':
-    pato = River(4000, mode=1, bed_slope=0.00717747, length=100, debug=False)
+    pato = River(4000, mode=1, bed_slope=0.00717266091, length=20, debug=False)
 
     print(f'calado normal: {pato.normal_depth:.3f}')
     print(f'calado critico: {pato.critical_depth:.3f}')
