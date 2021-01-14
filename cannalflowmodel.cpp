@@ -465,8 +465,8 @@ class River {
 
 
 int main(int argc, char **argv){
-    
-    switch(argc){ //Leemos argumentos por terminal
+    //Leemos argumentos por terminal
+    switch(argc){
       case 3:
       {
         River pato(atoi(argv[1]), atoi(argv[2]));
