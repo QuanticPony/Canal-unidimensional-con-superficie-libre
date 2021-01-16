@@ -3,8 +3,6 @@
 #include <math.h>
 using namespace std;
 
-//TODO: Revisar si se pueden pasar parametros por referencia para acelerar ejecucion del codigo
-//TODO: Pensar si los calados deberian de ser variables privadas
 
 class River {
 
@@ -61,12 +59,12 @@ class River {
 
             double runge_kutta_step;
             double delta_x;
-            double *positions = (double *)malloc(steps * sizeof(double));
-            double *depth = (double *)malloc(steps * sizeof(double));
-            double *height = (double *)malloc(steps * sizeof(double));
-            double *bed = (double *)malloc(steps * sizeof(double));
-            double *plot_normal_depth = (double *)malloc(steps * sizeof(double));
-            double *plot_critical_depth = (double *)malloc(steps * sizeof(double));  
+            double *positions;
+            double *depth;
+            double *height;
+            double *bed;
+            double *plot_normal_depth;
+            double *plot_critical_depth;  
             double normal_depth;
             double critical_depth;
             const char *profile_channel_type;
@@ -108,7 +106,17 @@ class River {
         newton_rhapson_delta = 0.001;
         
         delta_x = length / (steps - 1);
+        positions = (double *)malloc(steps * sizeof(double));
+        depth = (double *)malloc(steps * sizeof(double));
+        height = (double *)malloc(steps * sizeof(double));
+        bed = (double *)malloc(steps * sizeof(double));
+        plot_normal_depth = (double *)malloc(steps * sizeof(double));
+        plot_critical_depth = (double *)malloc(steps * sizeof(double));
         
+        if (abs(bed_slope) < 0.000001){
+                bed_slope = 0;
+        }
+
         critical_depth = newtonrhapson(1);
         if (bed_slope != 0){
             normal_depth = newtonrhapson(0);
@@ -129,7 +137,6 @@ class River {
         /*
         Constructor de clase para todos argumentos de entrada
         */
-
         steps = _steps;
         mode = _mode;
         discharge = _discharge;
@@ -140,6 +147,14 @@ class River {
         manning = _manning;
         gravity = _gravity;
         newton_rhapson_delta = _newton_rhapson_delta;
+
+        delta_x = length / (steps - 1);
+        positions = (double *)malloc(steps * sizeof(double));
+        depth = (double *)malloc(steps * sizeof(double));
+        height = (double *)malloc(steps * sizeof(double));
+        bed = (double *)malloc(steps * sizeof(double));
+        plot_normal_depth = (double *)malloc(steps * sizeof(double));
+        plot_critical_depth = (double *)malloc(steps * sizeof(double));
 
         if (abs(bed_slope) < 0.000001){
                 bed_slope = 0;
@@ -167,10 +182,8 @@ class River {
         */
         double normal = normal_depth;
         double critical = critical_depth;
-        double delta = delta_x;
         cout << "Calado normal:\t" << normal << endl;
         cout << "Calado critico\t" << critical << endl;
-        cout << "Delta x\t" << delta << endl;
     }
 
     double River::area(double height){
@@ -297,7 +310,7 @@ class River {
                     //M1
                     //Condiciones río abajo
                     runge_kutta_step = -delta_x;
-                    depth[0] = 1.01 * normal_depth;
+                    depth[0] = 1.5 * normal_depth;
                     profile_channel_type = "M1";
                 break;
 
@@ -386,8 +399,8 @@ class River {
         */
         
        int i;
-       for(i=0; i < steps; i++){                                                                                                        //TODO: Revisar Runge-Kutta
-           depth[i+1] = depth[i] + diffeq(depth[i] + 0.5 * diffeq(depth[i]) * runge_kutta_step) * runge_kutta_step;
+       for(i = 1; i < steps; i++){
+           depth[i] = depth[i-1] + diffeq(depth[i-1] + 0.5 * diffeq(depth[i-1]) * runge_kutta_step) * runge_kutta_step;
        }
     }
     
@@ -397,23 +410,16 @@ class River {
         */
 
         int i;
-        int mult;
         
-        if(runge_kutta_step < 0){
-            mult = 1;
-        }
-        else{
-            mult = -1;
-        }
-        
-        for(i=0; i < steps; i++){
+        for(i = 0; i < steps; i++){
             positions[i] = i * delta_x;
         }
         
         double corte = positions[steps-1] * bed_slope;
-        for(i=0; i < steps; i++){
-            bed[i] = corte-positions[i] * bed_slope;
-            height[i] = bed[i] + depth[mult*i];
+
+        for(i = 0; i < steps; i++){
+            bed[i] = corte - positions[i] * bed_slope;
+            height[i] = bed[i] + depth[(runge_kutta_step<0)? (steps-1-i) : i];
             plot_normal_depth[i] = bed[i] + normal_depth;
             plot_critical_depth[i] = bed[i] + critical_depth;
         }
@@ -432,7 +438,7 @@ class River {
 
         int i;
 
-        for(i=0; i < steps ; i++){
+        for(i = 0; i < steps ; i++){
         fprintf(f,"%lf %lf %lf %lf %lf\n", positions[i], bed[i], plot_critical_depth[i], plot_normal_depth[i], height[i]);
         }
         fclose(f);
@@ -452,7 +458,7 @@ class River {
         } 
 
         int i;
-        fprintf(f,"set grid\n set key box opaque\nset xlabel 'Distance (m)'\nset ylabel 'Elevation (m)'\n set title 'Water surface profile (%s)'\nset xrange[0:%lf]\n", profile_channel_type, length);
+        fprintf(f,"set grid\nset key box opaque\nset xlabel 'Distance (m)'\nset ylabel 'Elevation (m)'\nset title 'Water surface profile (%s)'\nset xrange[0:%lf]\n", profile_channel_type, length);
         fprintf(f,"p \"datos.txt\" u 1:2 w l lc 8 lw 2 t 'Bed', \"datos.txt\" u 1:3 w l lc 7 lw 2 t 'Critical depth', \"datos.txt\" u 1:4 w l lc 2 lw 2 t 'Normal depth', \"datos.txt\" u 1:5 w l lc 22 lw 2 t 'Water surface'\n");
         
         fclose(f);
