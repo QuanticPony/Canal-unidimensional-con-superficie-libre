@@ -210,7 +210,7 @@ class River():
         if abs(self.critical_depth - self.normal_depth) < 0.01:
             if mode == 1:
                 self.runge_kutta_step = -self.delta_x 
-                self.depth[0] = 1.1 * self.normal_depth
+                self.depth[0] = 1.5 * self.normal_depth
                 self.profile_channel_type = "C1"
             
             if mode == 2:
@@ -313,7 +313,7 @@ class River():
 
 
 if __name__ == '__main__':
-    pato = River(4000, mode=1, bed_slope=0.00717266091, length=20, debug=False)
+    pato = River(4000, mode=2)
 
     print(f'calado normal: {pato.normal_depth:.3f}')
     print(f'calado critico: {pato.critical_depth:.3f}')
